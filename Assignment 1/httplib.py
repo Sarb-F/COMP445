@@ -1,6 +1,7 @@
 import socket
 import argparse
 import sys
+import re
 from urllib.parse import urlparse
 
 CRLF = "\r\n"
@@ -19,8 +20,41 @@ def close_connection():
 	global conn
 	conn.close()
 
+# Method that takes in the response returned and parses it and returns a dictionary to allow a user to
+# view which section of the response they prefer or to view the entirety of the response
 def parse_response(response):
-    return response
+    status = ""
+    code = ""
+    body = ""
+    header = ""
+    value = 0
+    temp = response.split()
+    #print(temp)
+    
+    for c in range(len(temp)):
+        if temp[c] == "HTTP/1.1":
+            code = temp[c + 1]
+            status = temp[c + 2]
+    
+    for c in range(len(temp)):
+        if temp[c] != "chunked":
+            header += temp[c]
+            header += " "
+        if temp[c] == "chunked":
+            header += temp[c]
+            header += " "
+            value = c + 1
+            break
+
+    for c in range(len(temp)):
+        if c < value:
+            continue
+        else:
+            body += temp[c]
+            body += " "
+
+    display = {"status": status, "code": code, "body": body, "header": header, "response": response}
+    return display
 
 # Method to perform a get request to a specified url with the given headers and body
 # @param url: the url to perform the get request on
@@ -61,7 +95,7 @@ def get_request(url, port, headers, body):
 # @param headers: a dict of http headers where keys are the header names and values are the header values
 # @param queries: a dict containing the queries for this request where keys are the query names and values are the query values
 # @return: the response from the server
-def post_request(url, port, headers, queries):
+def post_request(url, port, headers, body):
     global conn
     url = urlparse(url)
     path = url.path
@@ -78,15 +112,7 @@ def post_request(url, port, headers, queries):
             message = "%s%s: %s%s"%(message, header, headers[header], CRLF)
         message = message + CRLF
         # If there are queries, then add those to the message
-        if queries:
-            # NOTE FOR GAB: this header is needed if you're sending the queries through the body. Not sure how that works if we're sending a file
-            headers["Content-Type"] = "application/x-www-form-urlencoded"
-            body = ""
-            for query in queries:
-                if body not "":
-                    body = body + "&"
-                body = "%s%s=%s"%(body, query, queries[query])
-            message = message + body + CRLF
+        message = message + body + CRLF
         # Send message
         conn.send(message.encode('utf-8'))
         buf = conn.recv(1000)

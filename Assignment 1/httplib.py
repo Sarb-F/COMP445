@@ -29,7 +29,6 @@ def parse_response(response):
     header = ""
     value = 0
     temp = response.split()
-    #print(temp)
     
     for c in range(len(temp)):
         if temp[c] == "HTTP/1.1":
@@ -87,8 +86,6 @@ def get_request(url, port, headers, body):
         close_connection()
     return parse_response(buf)
 
-# NOTE FOR GAB: From what I read on POST requests, the body is mainly used for the queries, but idk if it works differently for files (which can also be sent using POST), so maybe you will have to change the "queries" parameter to just a simple "body" string parameter and move the parsing queries part of this method into the httpc script
-# NOTE FOR GAB: There is also a lot of duplication between this method and the get method, but honestly idc that much. Feel free to clean it up if you feel like it, but eh
 # Method to perform a post request to a specified url with the given headers and query
 # @param url: the url to perform the get request on
 # @param port: the port to perform the get request on

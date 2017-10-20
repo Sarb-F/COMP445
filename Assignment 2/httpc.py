@@ -27,7 +27,7 @@ def run(args):
 	finalArgs = {}
 	finalForm = {}
 	temp = "{}"
-	jsonOutput = ""
+	jsonOutput = {}
 
 	#Parses url
 	for c in url:
@@ -75,15 +75,19 @@ def run(args):
 
         # takes json information from a file to be sent through post. If the information is in the shape of a form it will process that instead 
 	if(file is not ""):
-                with open(file) as data_file:    
-                        jsonOutput = json.load(data_file)
+                with open(file) as data_file:
+                    file_contents = ""
+                    for line in data_file:
+                        file_contents = file_contents + line
+                    jsonOutput['contents'] = file_contents
+                '''        jsonOutput = json.load(data_file)
                         temp = jsonOutput
                         
                 for c in temp:
                         if c is "&":
                                 isAForm = True
                 
-                if(isAForm is True):                        
+                if(isAForm is True):
                         for c in temp:
                                 if c is "&":
                                         form = temp.split("&")
@@ -92,7 +96,7 @@ def run(args):
                                 jsonOutput = {}
                                 for c in form:
                                         lhs, rhs = c.split("=", 1)
-                                        jsonOutput[lhs] = rhs
+                                        jsonOutput[lhs] = rhs'''
                 
 	dictPost = {'"args"': finalArgs, '"data"': data, '"files"': jsonOutput, '"form"': finalForm, '"headers"': header, "'json'": inline, '"url"': url}
 
@@ -102,7 +106,7 @@ def run(args):
                 if((file is "" and inline is "") or (file is "" and inline is not "") or (file is not "" and inline is "")): # checks that the user did not input both --f and --d at the same time
                         if(file is not ""): # if user inputted a file
                                 if(output is not ""): # Implemented -0 functionality
-                                        response = httplib.post_request(url, port, j, str(jsonOutput)) # send to post and receive a response
+                                        response = httplib.post_request(url, port, j, json.dumps(jsonOutput)) # send to post and receive a response
                                         orig_stdout = sys.stdout
                                         f = open(output, 'w')
                                         sys.stdout = f
@@ -119,7 +123,7 @@ def run(args):
                                         print(response['response']) # print the response of the message
                                         print(dictPost) # print entire post response
                                 else:
-                                        response = httplib.post_request(url, port, j, str(jsonOutput)) # send to post and receive a response
+                                        response = httplib.post_request(url, port, j, json.dumps(jsonOutput)) # send to post and receive a response
                                         print(response['status']) # print the status of the message
                                         print(response['code']) # print the status code of the message
                                         print(response['body']) # print the body of the message
@@ -194,7 +198,7 @@ def run(args):
                 if((file is "" and inline is "") or (file is "" and inline is not "") or (file is not "" and inline is "")):
                         if(file is not ""):
                                 if(output is not ""):
-                                        response = httplib.post_request(url, port, j, str(jsonOutput))
+                                        response = httplib.post_request(url, port, j, json.dumps(jsonOutput))
                                         print(dictPost)
                                         orig_stdout = sys.stdout
                                         f = open(output, 'w')
@@ -205,7 +209,7 @@ def run(args):
                                         sys.stdout = orig_stdout
                                         f.close()
                                 else:
-                                        httplib.post_request(url, port, j, str(jsonOutput))
+                                        httplib.post_request(url, port, j, json.dumps(jsonOutput))
                                         print(dictPost)
                         else:
                                 if(output is not ""):

@@ -2,6 +2,7 @@ import socket
 import threading
 import argparse
 import os
+import json
 
 CRLF = "\r\n"
 
@@ -17,9 +18,21 @@ def run_server(host, port):
     finally:
         listener.close()
 
-def handle_get(parsedData):
+def get_file_dir():
     current_dir = os.getcwd()
     file_dir = current_dir + "\\files\\"
+    return file_dir
+
+def get_message_body(data):
+    nextLine = False
+    parsedData = data.split(CRLF)
+    #TODO: add error handling for if there is actually no body
+    print(parsedData)
+    #second last split should be the body
+    return parsedData[len(parsedData)-2]
+
+def handle_get(parsedData):
+    file_dir = get_file_dir()
     get_command = parsedData[1]
     if get_command == '\\' or get_command == '/':
         return str(os.listdir(file_dir))
@@ -31,6 +44,20 @@ def handle_get(parsedData):
         for line in file:
             response_body = response_body + line
         return response_body
+
+def handle_post(parsedData, data):
+    file_dir = get_file_dir()
+    post_command = parsedData[1]
+    #TODO: add error handling for if command does not contain a filename (as in, it is just /)
+    #TODO: add error handling for if the filename is an invalid filename
+    filename = post_command[1:]
+    file = open(file_dir + filename, 'w')
+    message_body = get_message_body(data)
+    print(message_body)
+    #TODO: add error handling if message body is null or not a valid json
+    body_json = json.loads(message_body)
+    file_contents = body_json['contents']
+    file.write(file_contents)
 
 def handle_client(conn, addr, host, port):
     print('New client from', addr)
@@ -45,7 +72,10 @@ def handle_client(conn, addr, host, port):
         response_body = ""
         if parsedData[0] == "GET":
             response_body = handle_get(parsedData)
+        elif parsedData[0] == "POST":
+            response_body = handle_post(parsedData, data)
         print(response_body)
+        #TODO: edit the response message if there is an error. Should have a 4xx type response code and a fitting message
         response = "HTTP/1.1 200 OK%sConnection: keep-alive%sServer: %s%s"%(CRLF, CRLF, host, CRLF)
         if response_body:
             response = response + CRLF + response_body + CRLF

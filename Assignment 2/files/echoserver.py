@@ -25,3 +25,4 @@ parser.add_argument("--host", help="server host", default="localhost")
 parser.add_argument("--port", help="server port", type=int, default=8007)
 args = parser.parse_args()
 run_client(args.host, args.port)
+

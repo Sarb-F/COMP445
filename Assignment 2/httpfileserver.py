@@ -44,9 +44,6 @@ def get_file_mimetype(filename):
     file_dir = get_file_dir()
     mimetypes.init()
     return mimetypes.guess_type(file_dir + filename)
-    '''
-    mime = magic.Magic(mime=True)
-    return mime.from_file(file_dir + filename)'''
 
 def get_headers(data):
     headers = {}
@@ -68,15 +65,11 @@ def handle_get(parsedData):
         return str(os.listdir(file_dir)).encode('utf-8')
     else:
         #TODO: add error handling for if file doesn't exist
-        '''file = open(file_dir + filename, 'r')
-        response_body = ""
-        for line in file:
-            response_body = response_body + line'''
         file = open(file_dir + filename, 'rb')
         response_body = file.read(10000)
         return response_body
 
-def handle_post(parsedData, data):
+def handle_post(parsedData, header_data, body_data):
     file_dir = get_file_dir()
     post_command = parsedData[1]
     #TODO: add error handling for if command does not contain a filename (as in, it is just /)
@@ -84,7 +77,7 @@ def handle_post(parsedData, data):
     filename = post_command[1:]
     
     overwrite = True
-    headers = get_headers(data)
+    headers = get_headers(header_data)
     if headers and 'overwrite' in headers:
         overwrite = (headers['overwrite'] == 'true')
     if not overwrite:
@@ -93,24 +86,38 @@ def handle_post(parsedData, data):
             #TODO: error message here for if overwrite is false and there is already a file with the requested name
             return
     
-    file = open(file_dir + filename, 'w')
-    message_body = get_message_body(data)
-    #print(message_body)
+    file = open(file_dir + filename, 'wb')
     #TODO: add error handling if message body is null or not a valid json
-    body_json = json.loads(message_body)
-    file_contents = body_json['contents']
-    file.write(file_contents)
+    file.write(body_data)
 
 def handle_client(conn, addr, host, port):
     print('New client from', addr)
     try:
-        data = conn.recv(10024)
+        data = conn.recv(1000000000)
         if not data:
             return
-        data = data.decode('utf-8')
+        crlf_count = 0
+        header_data = b''
+        body_data = b''
+        for bit in data:
+            bit = bit.to_bytes(1, byteorder='big')
+            if crlf_count < 4:
+                header_data += bit
+                if (crlf_count == 0 or crlf_count == 2) and bit == b'\r':
+                    crlf_count += 1
+                elif (crlf_count == 1 or crlf_count == 3) and bit == b'\n':
+                    crlf_count += 1
+                else:
+                    crlf_count = 0
+            else:
+                body_data += bit
+        print(header_data)
+        print(body_data)
+        #TODO: stop assuming it is utf-8, since the body will often not be text data
+        header_data = header_data.decode('utf-8')
         print("data\n\n")
-        print(data)
-        parsedData = data.split()
+        print(header_data)
+        parsedData = header_data.split()
         #print(parsedData)
         response_body = ""
         #TODO: edit the response message if there is an error. Should have a 4xx type response code and a fitting message
@@ -122,11 +129,9 @@ def handle_client(conn, addr, host, port):
                 print(type)
                 response = response + "Content-Disposition: attachment;filename=\"" + filename + "\"" + CRLF + "Content-Type: " + type[0] + CRLF
             response_body = handle_get(parsedData)
+        #TODO: fix post so that it works with binary data like the GET does
         elif parsedData[0] == "POST":
-            response_body = handle_post(parsedData, data)
-        #print(response_body)
-        #if response_body:
-        #    response = response + CRLF + response_body + CRLF
+            response_body = handle_post(parsedData, header_data, body_data)
         bytes = response.encode('utf-8')
         if response_body:
             bytes = bytes + CRLF.encode('utf-8')

@@ -11,7 +11,7 @@ CRLF = "\r\n"
 def connect(host, port):
     global conn
     conn = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    conn.settimeout(10.00)
+    conn.settimeout(100.00)
     conn.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     conn.connect((host, port))
 
@@ -108,10 +108,11 @@ def post_request(url, port, headers, body):
         for header in headers:
             message = "%s%s: %s%s"%(message, header, headers[header], CRLF)
         message = message + CRLF
+        byte_message = message.encode('utf-8')
         # If there are queries, then add those to the message
-        message = message + body + CRLF
+        byte_message = byte_message + body + CRLF.encode('utf-8')
         # Send message
-        conn.send(message.encode('utf-8'))
+        conn.send(byte_message)
         buf = conn.recv(10000)
         buf = buf.decode('utf-8')
     finally:

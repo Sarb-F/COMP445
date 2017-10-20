@@ -1,35 +1,27 @@
 import socket
-import threading
 import argparse
+import sys
 
 
-def run_server(host, port):
-    listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+def run_client(host, port):
+    conn = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     try:
-        listener.bind((host, port))
-        listener.listen(5)
-        print('Echo server is listening at', port)
+        conn.connect((host, port))
+        print("Type any thing then ENTER. Press Ctrl+C to terminate")
         while True:
-            conn, addr = listener.accept()
-            threading.Thread(target=handle_client, args=(conn, addr)).start()
-    finally:
-        listener.close()
-
-
-def handle_client(conn, addr):
-    print('New client from', addr)
-    try:
-        while True:
-            data = conn.recv(1024)
-            if not data:
-                break
-            conn.sendall(data)
+            line = sys.stdin.readline(1024)
+            request = line.encode("utf-8")
+            conn.sendall(request)
+            # MSG_WAITALL waits for full request or error
+            response = conn.recv(len(request), socket.MSG_WAITALL)
+            sys.stdout.write("Replied: " + response.decode("utf-8"))
     finally:
         conn.close()
 
 
-# Usage python echoserver.py [--port port-number]
+# Usage: python echoclient.py --host host --port port
 parser = argparse.ArgumentParser()
-parser.add_argument("--port", help="echo server port", type=int, default=8007)
+parser.add_argument("--host", help="server host", default="localhost")
+parser.add_argument("--port", help="server port", type=int, default=8007)
 args = parser.parse_args()
-run_server('localhost', args.port)
+run_client(args.host, args.port)

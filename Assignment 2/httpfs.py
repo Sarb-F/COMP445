@@ -65,8 +65,13 @@ def handle_get(parsedData):
         return str(os.listdir(file_dir)).encode('utf-8')
     else:
         #TODO: add error handling for if file doesn't exist
-        file = open(file_dir + filename, 'rb')
-        response_body = file.read(10000)
+        response_body = b''
+        with open(file_dir + filename, 'rb') as file:
+            while True:
+                newData = file.read(1024)
+                if not newData:
+                    break
+                response_body += newData
         return response_body
 
 def handle_post(parsedData, header_data, body_data):
@@ -92,55 +97,65 @@ def handle_post(parsedData, header_data, body_data):
 
 def handle_client(conn, addr, host, port):
     print('New client from', addr)
-    try:
-        data = conn.recv(1000000000)
-        if not data:
-            return
-        crlf_count = 0
-        header_data = b''
-        body_data = b''
-        for bit in data:
-            bit = bit.to_bytes(1, byteorder='big')
-            if crlf_count < 4:
-                header_data += bit
-                if (crlf_count == 0 or crlf_count == 2) and bit == b'\r':
-                    crlf_count += 1
-                elif (crlf_count == 1 or crlf_count == 3) and bit == b'\n':
-                    crlf_count += 1
-                else:
-                    crlf_count = 0
+    #try:
+    data = b''
+    conn.settimeout(0.50)
+    #Read in data from the socket until there is a timeout. Then we know there is no more to read
+    while True:
+        try:
+            newData = conn.recv(1024)
+            print(newData)
+            if not newData:
+                break
+            data +=  newData
+        except:
+            break
+    
+    #Because the body of the message is often binary, we cannot decode it. So look for /r/n/r/n which marks the start of the body and parse header and body separately
+    crlf_count = 0
+    header_data = b''
+    body_data = b''
+    for bit in data:
+        bit = bit.to_bytes(1, byteorder='big')
+        if crlf_count < 4:
+            header_data += bit
+            if (crlf_count == 0 or crlf_count == 2) and bit == b'\r':
+                crlf_count += 1
+            elif (crlf_count == 1 or crlf_count == 3) and bit == b'\n':
+                crlf_count += 1
             else:
-                body_data += bit
-        print(header_data)
-        print(body_data)
-        #TODO: stop assuming it is utf-8, since the body will often not be text data
-        header_data = header_data.decode('utf-8')
-        print("data\n\n")
-        print(header_data)
-        parsedData = header_data.split()
-        #print(parsedData)
-        response_body = ""
-        #TODO: edit the response message if there is an error. Should have a 4xx type response code and a fitting message
-        response = "HTTP/1.1 200 OK%sConnection: keep-alive%sServer: %s%s"%(CRLF, CRLF, host, CRLF)
-        if parsedData[0] == "GET":
-            filename = get_filename(parsedData)
-            if filename:
-                type = get_file_mimetype(filename)
-                print(type)
-                response = response + "Content-Disposition: attachment;filename=\"" + filename + "\"" + CRLF + "Content-Type: " + type[0] + CRLF
-            response_body = handle_get(parsedData)
-        #TODO: fix post so that it works with binary data like the GET does
-        elif parsedData[0] == "POST":
-            response_body = handle_post(parsedData, header_data, body_data)
-        bytes = response.encode('utf-8')
-        if response_body:
-            bytes = bytes + CRLF.encode('utf-8')
-            bytes = bytes + response_body
-            bytes = bytes + CRLF.encode('utf-8')
-        conn.sendall(bytes)
-    finally:
-        conn.close()
-
+                crlf_count = 0
+        else:
+            body_data += bit
+    print(header_data)
+    print(body_data)
+    header_data = header_data.decode('utf-8')
+    print("data\n\n")
+    print(header_data)
+    parsedData = header_data.split()
+    #print(parsedData)
+    response_body = ""
+    #TODO: edit the response message if there is an error. Should have a 4xx type response code and a fitting message
+    response = "HTTP/1.1 200 OK%sConnection: keep-alive%sServer: %s%s"%(CRLF, CRLF, host, CRLF)
+    if parsedData[0] == "GET":
+        filename = get_filename(parsedData)
+        if filename:
+            type = get_file_mimetype(filename)
+            print(type)
+            response = response + "Content-Disposition: attachment;filename=\"" + filename + "\"" + CRLF + "Content-Type: " + type[0] + CRLF
+        response_body = handle_get(parsedData)
+    #TODO: fix post so that it works with binary data like the GET does
+    elif parsedData[0] == "POST":
+        response_body = handle_post(parsedData, header_data, body_data)
+    bytes = response.encode('utf-8')
+    if response_body:
+        bytes = bytes + CRLF.encode('utf-8')
+        bytes = bytes + response_body
+        bytes = bytes + CRLF.encode('utf-8')
+    conn.sendall(bytes)
+    #finally:
+    #    conn.close()
+    conn.close()
 
 # Usage python httpfileserver.py [--port port-number]
 parser = argparse.ArgumentParser()

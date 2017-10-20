@@ -3,6 +3,7 @@ import threading
 import argparse
 import os
 import json
+import mimetypes
 
 CRLF = "\r\n"
 
@@ -33,6 +34,20 @@ def get_message_body(data):
     #second last split should be the body
     return parsedData[len(parsedData)-2]
 
+def get_filename(parsedData):
+    if parsedData[1] == '\\' or parsedData[1] == '/':
+        return
+    return parsedData[1][1:]
+
+def get_file_mimetype(filename):
+    #TODO: add error handling if file doesn't exist
+    file_dir = get_file_dir()
+    mimetypes.init()
+    return mimetypes.guess_type(file_dir + filename)
+    '''
+    mime = magic.Magic(mime=True)
+    return mime.from_file(file_dir + filename)'''
+
 def get_headers(data):
     headers = {}
     parsedData = data.split(CRLF)
@@ -48,16 +63,17 @@ def get_headers(data):
 
 def handle_get(parsedData):
     file_dir = get_file_dir()
-    get_command = parsedData[1]
-    if get_command == '\\' or get_command == '/':
-        return str(os.listdir(file_dir))
+    filename = get_filename(parsedData)
+    if not filename:
+        return str(os.listdir(file_dir)).encode('utf-8')
     else:
-        filename = get_command[1:]
         #TODO: add error handling for if file doesn't exist
-        file = open(file_dir + filename, 'r')
+        '''file = open(file_dir + filename, 'r')
         response_body = ""
         for line in file:
-            response_body = response_body + line
+            response_body = response_body + line'''
+        file = open(file_dir + filename, 'rb')
+        response_body = file.read(10000)
         return response_body
 
 def handle_post(parsedData, data):
@@ -97,16 +113,26 @@ def handle_client(conn, addr, host, port):
         parsedData = data.split()
         #print(parsedData)
         response_body = ""
+        #TODO: edit the response message if there is an error. Should have a 4xx type response code and a fitting message
+        response = "HTTP/1.1 200 OK%sConnection: keep-alive%sServer: %s%s"%(CRLF, CRLF, host, CRLF)
         if parsedData[0] == "GET":
+            filename = get_filename(parsedData)
+            if filename:
+                type = get_file_mimetype(filename)
+                print(type)
+                response = response + "Content-Disposition: attachment;filename=\"" + filename + "\"" + CRLF + "Content-Type: " + type[0] + CRLF
             response_body = handle_get(parsedData)
         elif parsedData[0] == "POST":
             response_body = handle_post(parsedData, data)
         #print(response_body)
-        #TODO: edit the response message if there is an error. Should have a 4xx type response code and a fitting message
-        response = "HTTP/1.1 200 OK%sConnection: keep-alive%sServer: %s%s"%(CRLF, CRLF, host, CRLF)
+        #if response_body:
+        #    response = response + CRLF + response_body + CRLF
+        bytes = response.encode('utf-8')
         if response_body:
-            response = response + CRLF + response_body + CRLF
-        conn.sendall(response.encode('utf-8'))
+            bytes = bytes + CRLF.encode('utf-8')
+            bytes = bytes + response_body
+            bytes = bytes + CRLF.encode('utf-8')
+        conn.sendall(bytes)
     finally:
         conn.close()
 

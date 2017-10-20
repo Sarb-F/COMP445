@@ -80,7 +80,7 @@ def get_request(url, port, headers, body):
         message = message + CRLF + body + CRLF
         # Send message
         conn.send(message.encode('utf-8'))
-        buf = conn.recv(1000)
+        buf = conn.recv(10000)
         buf = buf.decode('utf-8')
     finally:
         close_connection()
@@ -112,7 +112,7 @@ def post_request(url, port, headers, body):
         message = message + body + CRLF
         # Send message
         conn.send(message.encode('utf-8'))
-        buf = conn.recv(1000)
+        buf = conn.recv(10000)
         buf = buf.decode('utf-8')
     finally:
         close_connection()

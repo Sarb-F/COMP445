@@ -54,15 +54,15 @@ def run(args):
 	for c in inline:
                 if c is "&":
                         isAForm = True
-                        print("ok")
+                        
 	
 	if(isAForm is True):
-                print("Here")
+                
                 for c in inline:
                         if c is "&":
                                 form = inline.split("&")
                                 formTrue = True
-                                print("hello")
+                                
                 if(formTrue is True):
                         temp = ""
                         for c in form:

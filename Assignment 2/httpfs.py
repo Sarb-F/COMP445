@@ -2,6 +2,7 @@ import socket
 import threading
 import argparse
 import os
+import os.path
 import json
 import mimetypes
 
@@ -34,6 +35,12 @@ def get_filename(parsedData):
 
 def get_file_mimetype(filename):
     #TODO: add error handling if file doesn't exist
+    print("I am here")
+    print(get_file_dir() + filename)
+    if(os.path.isfile(get_file_dir() + filename) == False):
+        print("1")
+        raise IOError("File " + filename + " does not exist.")
+    print("Hello")    
     file_dir = get_file_dir()
     mimetypes.init()
     return mimetypes.guess_type(file_dir + filename)
@@ -54,6 +61,11 @@ def get_headers(data):
 def handle_get(parsedData):
     file_dir = get_file_dir()
     filename = get_filename(parsedData)
+    if(os.path.isfile(file_dir + filename) == False):
+        print("2")
+        print(file_dir + filename)
+        raise IOError("File " + filename + " does not exist for GET.")
+        
     if not filename:
         return str(os.listdir(file_dir)).encode('utf-8')
     else:
@@ -70,9 +82,16 @@ def handle_get(parsedData):
 def handle_post(parsedData, header_data, body_data):
     file_dir = get_file_dir()
     post_command = parsedData[1]
+    if(post_command == '/' or post_command == '\\'):
+        print("3")
+        raise SystemError("Command did not contain a file.")
+        
     #TODO: add error handling for if command does not contain a filename (as in, it is just /)
     #TODO: add error handling for if the filename is an invalid filename
     filename = post_command[1:]
+    if('$' in filename or ',' in filename or '/' in filename):
+        print("4")
+        raise IOError("File " + filename + " is an invalid filename.")
     
     overwrite = True
     headers = get_headers(header_data)
@@ -81,12 +100,26 @@ def handle_post(parsedData, header_data, body_data):
     if not overwrite:
         file_list = os.listdir(file_dir)
         if filename in file_list:
+            if(os.path.isfile(filename) == True and overwrite == False):
+                print("5")
+                raise SystemError("File " + filename + " already exists for POST and overwrite was false.")
             #TODO: error message here for if overwrite is false and there is already a file with the requested name
             return
     
     file = open(file_dir + filename, 'wb')
-    #TODO: add error handling if message body is null or not a valid json
+    print("body_data is...")
+    print(body_data)
+    if(body_data == CRLF.encode('utf-8')):
+        print("6")
+        raise SystemError("Message body was empty.")
+    #TODO: add error handling if message body is null
     file.write(body_data)
+
+def checkIfGoodDirectory(filename):
+    cwd = get_file_dir()
+    print("Current working directory is: " + cwd)
+    print("....")
+    print(filename)
 
 def handle_client(conn, addr, host, port):
     print('New client from', addr)
@@ -129,29 +162,62 @@ def handle_client(conn, addr, host, port):
     #print(parsedData)
     response_body = ""
     #TODO: edit the response message if there is an error. Should have a 4xx type response code and a fitting message
-    response = "HTTP/1.1 200 OK%sConnection: keep-alive%sServer: %s%s"%(CRLF, CRLF, host, CRLF)
-    if parsedData[0] == "GET":
-        filename = get_filename(parsedData)
-        if filename:
-            type = get_file_mimetype(filename)
-            print(type)
-            response = response + "Content-Disposition: attachment;filename=\"" + filename + "\"" + CRLF + "Content-Type: " + type[0] + CRLF
-        response_body = handle_get(parsedData)
-    #TODO: fix post so that it works with binary data like the GET does
-    elif parsedData[0] == "POST":
-        response_body = handle_post(parsedData, header_data, body_data)
-    bytes = response.encode('utf-8')
-    if response_body:
-        bytes = bytes + CRLF.encode('utf-8')
-        bytes = bytes + response_body
-        bytes = bytes + CRLF.encode('utf-8')
-    conn.sendall(bytes)
-    #finally:
-    #    conn.close()
-    conn.close()
+    try:
+        response = "HTTP/1.1 200 OK%sConnection: keep-alive%sServer: %s%s"%(CRLF, CRLF, host, CRLF)
+        if parsedData[0] == "GET":
+            filename = get_filename(parsedData)
+            checkIfGoodDirectory(filename)
+            if filename:
+                print("Now I am...")
+                type = get_file_mimetype(filename)
+                print("Here")
+                print(type)
+                print("TYPETYPETYPE")
+                filetype = type[0]
+                if(filetype is None):
+                    filetype = ""
+                response = response + "Content-Disposition: attachment;filename=\"" + filename + "\"" + CRLF + "Content-Type: " + filetype + CRLF
+                print("Good")
+            response_body = handle_get(parsedData)
+        #TODO: fix post so that it works with binary data like the GET does
+        elif parsedData[0] == "POST":
+            print("Here")
+            response_body = handle_post(parsedData, header_data, body_data)
+            print("Now here")
+        bytes = response.encode('utf-8')
+        print("Great")
+        if response_body:
+            bytes = bytes + CRLF.encode('utf-8')
+            bytes = bytes + response_body
+            bytes = bytes + CRLF.encode('utf-8')
+        print("Perfect")
+        conn.sendall(bytes)
+        #finally:
+        #    conn.close()
+        conn.close()
+    except IOError as IO:
+        response = "HTTP/1.1 404 ERROR: File could not be found%sConnection: keep-alive%sServer: %s%s"%(CRLF, CRLF, host, CRLF)
+        print(response)
+        print(IO)
+        bytes = response.encode('utf-8')
+        conn.sendall(bytes)
+    except SystemError as SE:
+        response = "HTTP/1.1 400 ERROR: Bad Request%sConnection: keep-alive%sServer: %s%s"%(CRLF, CRLF, host, CRLF)
+        print(response)
+        print(SE)
+        bytes = response.encode('utf-8')
+        conn.sendall(bytes)
+    except Exception as e:
+        response = "HTTP/1.1 300 ERROR: It should not be going here%sConnection: keep-alive%sServer: %s%s"%(CRLF, CRLF, host, CRLF)
+        response = response + "Should not be here."
+        print(response)
+        bytes = response.encode('utf-8')
+        conn.sendall(bytes)
 
 # Usage python httpfileserver.py [--port port-number]
 parser = argparse.ArgumentParser()
 parser.add_argument("--port", help="file server port", type=int, default=8007)
 args = parser.parse_args()
 run_server('localhost', args.port)
+
+checkIfGoodDirectory("Hello")

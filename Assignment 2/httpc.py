@@ -76,7 +76,7 @@ def run(args):
         # takes json information from a file to be sent through post. If the information is in the shape of a form it will process that instead 
 	if(file is not ""):
                 data_file = open(file, 'rb')
-                jsonOutput = data_file.read(1000000000)
+                jsonOutput = data_file.read(100000)
                 '''        jsonOutput = json.load(data_file)
                         temp = jsonOutput
                         
@@ -147,7 +147,8 @@ def run(args):
                                         print(response['response']) # print the response of the message
                                         print(dictPost) # print entire post response
                                 else:
-                                        response = httplib.post_request(url, port, j, inline) # send to post and receive a response
+                                        body = inline.encode('utf-8')
+                                        response = httplib.post_request(url, port, j, body) # send to post and receive a response
                                         print(response['status']) # print the status of the message
                                         print(response['code']) # print the status code of the message
                                         print(response['body']) # print the body of the message

@@ -51,7 +51,7 @@ def get_filename(parsedData):
 #Please check
 def get_file_mimetype(filename):
     try:
-        if(!os.path.isfile(filename)):
+        if(os.path.isfile(filename) == False):
             raise IOError("The filename given does not correspond to any file in the directory, please input the proper path and filename again.")
     except IOError as IO:
         print("IOError: ", IO)
@@ -81,7 +81,7 @@ def handle_get(parsedData):
         return str(os.listdir(file_dir)).encode('utf-8')
     else:
         try:
-            if(!os.path.isfile(filename)):
+            if(os.path.isfile(filename) == False):
                 raise IOError("The filename given for the handle_get method does not correspond to any file in the directory, please input the proper path and filename again.")
         except IOError as IO:
             print("Error: ", IO)
@@ -104,7 +104,7 @@ def handle_post(parsedData, header_data, body_data):
     try:
         if(filename == '/' or filename == '\\'):
             raise Exception("Filename was just / or \\. Therefore it was invalid")
-        if(!os.path.isfile(filename)):
+        if(os.path.isfile(filename) == False):
             raise IOError("The filename given for the handle_get method does not correspond to any file in the directory, please input the proper path and filename again.")            
     except Exception as e:
         print("Error: ", e)
@@ -154,7 +154,7 @@ def handle_client(conn, addr, host, port):
             if not newData:
                 break
             data +=  newData
-        except:
+        except Exception as e:
             break
     
     #Because the body of the message is often binary, we cannot decode it. So look for /r/n/r/n which marks the start of the body and parse header and body separately
@@ -182,31 +182,62 @@ def handle_client(conn, addr, host, port):
     #print(parsedData)
     response_body = ""
     #TODO: edit the response message if there is an error. Should have a 4xx type response code and a fitting message
+
+    response = "HTTP/1.1 200 OK%sConnection: keep-alive%sServer: %s%s"%(CRLF, CRLF, host, CRLF)
     try:
-        response = "HTTP/1.1 200 OK%sConnection: keep-alive%sServer: %s%s"%(CRLF, CRLF, host, CRLF)
-        if parsedData[0] == "GET":
-            filename = get_filename(parsedData)
-            if filename:
-                type = get_file_mimetype(filename)
-                print(type)
-                response = response + "Content-Disposition: attachment;filename=\"" + filename + "\"" + CRLF + "Content-Type: " + type[0] + CRLF
-            response_body = handle_get(parsedData)
-        #TODO: fix post so that it works with binary data like the GET does
-        elif parsedData[0] == "POST":
-            response_body = handle_post(parsedData, header_data, body_data)
-        bytes = response.encode('utf-8')
-        if response_body:
+        try:
+            if parsedData[0] == "GET":
+                filename = get_filename(parsedData)
+                if filename:
+                    type = get_file_mimetype(filename)
+                    print(type)
+                    response = response + "Content-Disposition: attachment;filename=\"" + filename + "\"" + CRLF + "Content-Type: " + type[0] + CRLF
+                    response_body = handle_get(parsedData)
+                else:
+                    raise IOError                
+        except IOError as IO:
+            response = "HTTP/1.1 404 ERROR%sConnection: shutdown%sServer: %s%s"%(CRLF, CRLF, host, CRLF)
+            response = response + "Content-Disposition: attachment;filename=\"" + filename + "\"" + CRLF + "Content-Type: " + type[0] + CRLF + "File could not be found for GET"
+            print(response)
+            bytes = response.encode('utf-8')
             bytes = bytes + CRLF.encode('utf-8')
             bytes = bytes + response_body
             bytes = bytes + CRLF.encode('utf-8')
-        conn.sendall(bytes)
-        #finally:
-        #    conn.close()
-        conn.close()
+            print(bytes)
+            
+            #TODO: fix post so that it works with binary data like the GET does
+        try:
+            if(parsedData[0] == "POST"):
+                response_body = handle_post(parsedData, header_data, body_data)
+            bytes = response.encode('utf-8')
+            if response_body:
+                bytes = bytes + CRLF.encode('utf-8')
+                bytes = bytes + response_body
+                bytes = bytes + CRLF.encode('utf-8')
+            else:
+                raise IOError
+            conn.sendall(bytes)
+            conn.close()
+        except IOError as IO:
+            response = "HTTP/1.1 404 ERROR%sConnection: shutdown%sServer: %s%s"%(CRLF, CRLF, host, CRLF)
+            response = response + "Content-Disposition: attachment;filename=\"" + filename + "\"" + CRLF + "Content-Type: " + type[0] + CRLF + "File could not be found for POST"
+            print(response)
+            bytes = response.encode('utf-8')
+            bytes = bytes + CRLF.encode('utf-8')
+            bytes = bytes + response_body
+            bytes = bytes + CRLF.encode('utf-8')
+            print(bytes)
+            #finally:
+            #    conn.close()                
     except Exception as e:
-        response = "HTTP/1.1 404 Not Found%sConnection: shutdown%sServer: %s%s"%(CRLF, CRLF, host, CRLF)
-        print("Error: ", response)
-    
+        response = "HTTP/1.1 400 ERROR%sConnection: shutdown%sServer: %s%s"%(CRLF, CRLF, host, CRLF)
+        response = response + "Content-Disposition: attachment;filename=\"" + filename + "\"" + CRLF + "Content-Type: " + type[0] + CRLF + "File could not be found for POST"
+        print(response)
+        bytes = response.encode('utf-8')
+        bytes = bytes + CRLF.encode('utf-8')
+        bytes = bytes + response_body
+        bytes = bytes + CRLF.encode('utf-8')
+        print(bytes)
 
 # Usage python httpfileserver.py [--port port-number]
 parser = argparse.ArgumentParser()

@@ -146,8 +146,8 @@ def run(args):
                                         print(response['header']) # print the header of the message
                                         print(response['response']) # print the response of the message
                                         print(dictPost) # print entire post response
-                                else:
-                                        body = inline.encode('utf-8')
+                                else:                                        
+                                        body = inline.encode()
                                         response = httplib.post_request(url, port, j, body) # send to post and receive a response
                                         print(response['status']) # print the status of the message
                                         print(response['code']) # print the status code of the message

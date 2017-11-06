@@ -10,9 +10,6 @@ CRLF = "\r\n"
 debug = False
 file_dir = os.getcwd() + "\\files\\"
 
-#TODO: add in debug printing messages
-#TODO: add in the command line arguments the assignment describes
-
 def run_server(host, port, dir):
     global file_dir
     file_dir = dir
@@ -53,8 +50,9 @@ def get_headers(data):
             break
         headerComponents = header.split(": ")
         headers[headerComponents[0]] = headerComponents[1]
-    print("The following headers were found")
-    print(headers)
+    if(debug):
+        print("The following headers were found")
+        print(headers)
     return headers
 
 def handle_get(parsedData):
@@ -120,7 +118,8 @@ def handle_client(conn, addr, host, port):
     while True:
         try:
             newData = conn.recv(1024)
-            print(newData)
+            if(debug):
+                print(newData)
             if not newData:
                 break
             data +=  newData

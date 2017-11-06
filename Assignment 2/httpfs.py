@@ -8,11 +8,14 @@ import mimetypes
 
 CRLF = "\r\n"
 debug = False
+file_dir = os.getcwd() + "\\files\\"
 
 #TODO: add in debug printing messages
 #TODO: add in the command line arguments the assignment describes
 
-def run_server(host, port):
+def run_server(host, port, dir):
+    global file_dir
+    file_dir = dir
     listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     try:
         listener.bind((host, port))
@@ -25,8 +28,7 @@ def run_server(host, port):
         listener.close()
 
 def get_file_dir():
-    current_dir = os.getcwd()
-    file_dir = current_dir + "\\files\\"
+    global file_dir
     return file_dir
 
 def get_filename(parsedData):
@@ -195,11 +197,16 @@ def handle_client(conn, addr, host, port):
         conn.close()
 
 # Usage python httpfileserver.py [--port port-number]
+current_dir = os.getcwd() + "\\files\\"
 parser = argparse.ArgumentParser()
 parser.add_argument("-p", help="file server port", type=int, default=8007)
 parser.add_argument("-v", help="verbose", action="store_true")
+parser.add_argument("-d", help="file directory", type=str, default=current_dir)
 args = parser.parse_args()
-if(args.v):
-    debug = True
-    print("Running with verbose")
-run_server('localhost', args.p)
+if(os.path.isdir(args.d)):
+    if(args.v):
+        debug = True
+        print("Running with verbose in directory " + args.d)
+    run_server('localhost', args.p, args.d)
+else:
+    print("Directory " + args.d + " provided is not an existing directory")

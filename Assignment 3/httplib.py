@@ -1,19 +1,23 @@
 import socket
 import argparse
+import ipaddress
 import sys
 import re
 from urllib.parse import urlparse
+from packet import Packet
+from packet_constructor import Packet_Constructor
 
 CRLF = "\r\n"
+router_host="localhost"
+router_port=3000
+router = (router_host, router_port)
 
 # Method to make a TCP connection to a specified hostname and port
 # Connection is set on the global conn variable
 def connect(host, port):
     global conn
-    conn = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    conn.settimeout(100.00)
-    conn.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    conn.connect((host, port))
+    conn = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    #TODO: TCP handshake here
 
 # Method to close the open TCP connection
 def close_connection():
@@ -55,6 +59,30 @@ def parse_response(response):
     display = {"status": status, "code": code, "body": body, "header": header, "response": response}
     return display
 
+def communicate_with_server(data, host, port):
+    global conn
+    global router
+    try:
+        peer_ip = ipaddress.ip_address(socket.gethostbyname(host))
+        connect(host, port)
+        Packet_Constructor.send_as_packets(data, conn, router, peer_ip, port)
+        p_constructor = Packet_Constructor()
+        while True:
+            print("waiting for data")
+            data, sender = conn.recvfrom(1024)
+            print("got some data")
+            p = Packet.from_bytes(data)
+            print(p.seq_num)
+            payload = p_constructor.add_packet(p)
+            if(payload):
+                print("Received last packet")
+                print(payload)
+                return payload
+            else:
+                print("is not the last packet")
+    finally:
+        close_connection()
+
 # Method to perform a get request to a specified url with the given headers and body
 # @param url: the url to perform the get request on
 # @param port: the port to perform the get request on
@@ -70,21 +98,20 @@ def get_request(url, port, headers, body):
         path = "/"
     host = url.netloc
     headers["Host"] = host
-    try:
-        # Connect to the host
-        connect(host, port)
-        # Construct the message
-        message = "GET %s HTTP/1.1%s" % (path, CRLF)
-        for header in headers:
-            message = "%s%s: %s%s"%(message, header, headers[header], CRLF)
-        message = message + CRLF + body + CRLF
-        # Send message
-        conn.send(message.encode('utf-8'))
-        buf = conn.recv(10000)
-        buf = buf.decode('utf-8')
-    finally:
-        close_connection()
-    return parse_response(buf)
+    # Connect to the host
+    
+    # Construct the message
+    message = "GET %s HTTP/1.1%s" % (path, CRLF)
+    for header in headers:
+        message = "%s%s: %s%s"%(message, header, headers[header], CRLF)
+    message = message + CRLF + body + CRLF
+    # Send message
+    response = communicate_with_server(message.encode('utf-8'), host, port)
+    '''conn.send(message.encode('utf-8'))
+    buf = conn.recv(10000)
+    buf = buf.decode('utf-8')'''
+    
+    return parse_response(response)
 
 # Method to perform a post request to a specified url with the given headers and query
 # @param url: the url to perform the get request on
@@ -100,21 +127,20 @@ def post_request(url, port, headers, body):
         path = "/"
     host = url.netloc
     headers["Host"] = host
-    try:
-        # Connect to the host
-        connect(host, port)
-        # Construct the message
-        message = "POST %s HTTP/1.1%s" % (path, CRLF)
-        for header in headers:
-            message = "%s%s: %s%s"%(message, header, headers[header], CRLF)
-        message = message + CRLF
-        byte_message = message.encode('utf-8')
-        # If there are queries, then add those to the message
-        byte_message = byte_message + body + CRLF.encode('utf-8')
-        # Send message
-        conn.send(byte_message)
-        buf = conn.recv(10000)
-        buf = buf.decode('utf-8')
-    finally:
-        close_connection()
-    return parse_response(buf)
+    # Connect to the host
+    connect(host, port)
+    # Construct the message
+    message = "POST %s HTTP/1.1%s" % (path, CRLF)
+    for header in headers:
+        message = "%s%s: %s%s"%(message, header, headers[header], CRLF)
+    message = message + CRLF
+    byte_message = message.encode('utf-8')
+    # If there are queries, then add those to the message
+    byte_message = byte_message + body + CRLF.encode('utf-8')
+    # Send message
+    response = communicate_with_server(byte_message, host, port)
+    '''conn.send(byte_message)
+    buf = conn.recv(10000)
+    buf = buf.decode('utf-8')'''
+        
+    return parse_response(response)

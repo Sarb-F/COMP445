@@ -1,10 +1,8 @@
 import ipaddress
 
-MIN_LEN = 12
-MAX_LEN = 1024
-
-
 class Packet:
+    MIN_LEN = 12
+    MAX_LEN = 1024
     """
     Packet represents a simulated UDP packet.
     """
@@ -51,9 +49,9 @@ class Packet:
             Raises:
                 ValueError: if packet is too short or too long or invalid peer address.
         """
-        if len(raw) < MIN_LEN:
+        if len(raw) < Packet.MIN_LEN:
             raise ValueError("packet is too short: {} bytes".format(len(raw)))
-        if len(raw) > MAX_LEN:
+        if len(raw) > Packet.MAX_LEN:
             raise ValueError("packet is exceeded max length: {} bytes".format(len(raw)))
 
         curr = [0, 0]

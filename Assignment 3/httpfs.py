@@ -147,7 +147,10 @@ def handle_packet(conn, data, sender):
     if(payload):
         print("Received last packet")
         response = handle_data(payload, sender)
-        new_p = Packet(packet_type=0,
+        print("Sending packets")
+        print(response)
+        Packet_Constructor.send_as_packets(response, conn, sender, p.peer_ip_addr, p.peer_port)
+        '''new_p = Packet(packet_type=0,
                        seq_num=p.seq_num,
                        peer_ip_addr=p.peer_ip_addr,
                        peer_port=p.peer_port,
@@ -155,7 +158,7 @@ def handle_packet(conn, data, sender):
                        payload=response)
         print("Sending packet")
         print(response)
-        conn.sendto(new_p.to_bytes(), sender)
+        conn.sendto(new_p.to_bytes(), sender)'''
         print("Sent!")
     else:
         print("is not the last packet")

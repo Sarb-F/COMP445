@@ -75,8 +75,15 @@ def run(args):
 
         # takes json information from a file to be sent through post. If the information is in the shape of a form it will process that instead 
 	if(file is not ""):
-                data_file = open(file, 'rb')
-                jsonOutput = data_file.read(100000)
+                '''data_file = open(file, 'rb')
+                jsonOutput = data_file.read(100000)'''
+                jsonOutput = b''
+                with open(file, 'rb') as data_file:
+                    while True:
+                        newData = data_file.read(1024)
+                        if not newData:
+                            break
+                        jsonOutput += newData
                 '''        jsonOutput = json.load(data_file)
                         temp = jsonOutput
                         

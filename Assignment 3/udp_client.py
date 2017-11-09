@@ -11,9 +11,17 @@ def run_client(router_addr, router_port, server_addr, server_port):
     conn = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     timeout = 5
     try:
-        #msg = "Hello World"
         path = "/test.txt"
-        msg = "GET %s HTTP/1.1%s" % (path, CRLF)
+        msg = "GET %s " % (path)
+        p = Packet(packet_type=0,
+                   seq_num=0,
+                   peer_ip_addr=peer_ip,
+                   peer_port=server_port,
+                   is_last_packet=False,
+                   payload=msg.encode("utf-8"))
+        conn.sendto(p.to_bytes(), (router_addr, router_port))
+        
+        msg = "HTTP/1.1%s" % (CRLF)
         msg = msg + CRLF
         p = Packet(packet_type=0,
                    seq_num=1,

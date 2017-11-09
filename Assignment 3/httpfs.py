@@ -6,10 +6,12 @@ import os.path
 import json
 import mimetypes
 from packet import Packet
+from packet_constructor import Packet_Constructor
 
 CRLF = "\r\n"
 debug = False
 file_dir = os.getcwd() + "\\files\\"
+p_constructor = Packet_Constructor()
 
 def run_server(host, port, dir):
     global file_dir
@@ -112,7 +114,15 @@ def checkIfGoodDirectoryPost(filename):
         raise Exception("You cannot Post the file there! Stop trying to hack our system.")
 
 def handle_packet(conn, data, sender):
+    global p_constructor
     p = Packet.from_bytes(data)
+    payload = p_constructor.add_packet(p)
+    '''p = Packet.from_bytes(data)
+    if p.seq_num is 0:
+        current_payload = p.payload
+    else:
+        current_payload += p.payload'''
+    
     '''if(debug):
         print('New client from', addr)
     data = b''
@@ -130,20 +140,25 @@ def handle_packet(conn, data, sender):
         except:
             break'''
     print(sender)
+    print(p.seq_num)
     print(data)
     print(p.peer_ip_addr)
     print(p.peer_port)
-    response = handle_data(p.payload, sender)
-    new_p = Packet(packet_type=0,
-                   seq_num=p.seq_num,
-                   peer_ip_addr=p.peer_ip_addr,
-                   peer_port=p.peer_port,
-                   is_last_packet=True,
-                   payload=response)
-    print("Sending packet")
-    print(response)
-    conn.sendto(new_p.to_bytes(), sender)
-    print("Sent!")
+    if(payload):
+        print("Received last packet")
+        response = handle_data(payload, sender)
+        new_p = Packet(packet_type=0,
+                       seq_num=p.seq_num,
+                       peer_ip_addr=p.peer_ip_addr,
+                       peer_port=p.peer_port,
+                       is_last_packet=True,
+                       payload=response)
+        print("Sending packet")
+        print(response)
+        conn.sendto(new_p.to_bytes(), sender)
+        print("Sent!")
+    else:
+        print("is not the last packet")
 
 def handle_data(data, addr):
     host = "localhost"

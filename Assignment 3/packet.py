@@ -67,7 +67,7 @@ class Packet:
         peer_addr = ipaddress.ip_address(nbytes(4))
         peer_port = int.from_bytes(nbytes(2), byteorder='big')
         last_packet = int.from_bytes(nbytes(1), byteorder='big')
-        is_last_packet = (last_packet is 1)
+        is_last_packet = (last_packet == 1)
         payload = raw[curr[1]:]
 
         return Packet(packet_type=packet_type,

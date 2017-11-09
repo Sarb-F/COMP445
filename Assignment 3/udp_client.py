@@ -19,6 +19,7 @@ def run_client(router_addr, router_port, server_addr, server_port):
                    seq_num=1,
                    peer_ip_addr=peer_ip,
                    peer_port=server_port,
+                   is_last_packet=True,
                    payload=msg.encode("utf-8"))
         conn.sendto(p.to_bytes(), (router_addr, router_port))
         print('Send "{}" to router'.format(msg))

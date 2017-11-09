@@ -130,13 +130,20 @@ def handle_packet(conn, data, sender):
         except:
             break'''
     print(sender)
+    print(data)
+    print(p.peer_ip_addr)
+    print(p.peer_port)
     response = handle_data(p.payload, sender)
     new_p = Packet(packet_type=0,
                    seq_num=p.seq_num,
                    peer_ip_addr=p.peer_ip_addr,
                    peer_port=p.peer_port,
+                   is_last_packet=True,
                    payload=response)
+    print("Sending packet")
+    print(response)
     conn.sendto(new_p.to_bytes(), sender)
+    print("Sent!")
 
 def handle_data(data, addr):
     host = "localhost"

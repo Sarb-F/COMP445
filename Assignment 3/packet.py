@@ -1,6 +1,6 @@
 import ipaddress
 
-MIN_LEN = 11
+MIN_LEN = 12
 MAX_LEN = 1024
 
 
@@ -9,11 +9,12 @@ class Packet:
     Packet represents a simulated UDP packet.
     """
 
-    def __init__(self, packet_type, seq_num, peer_ip_addr, peer_port, payload):
+    def __init__(self, packet_type, seq_num, peer_ip_addr, peer_port, is_last_packet, payload):
         self.packet_type = int(packet_type)
         self.seq_num = int(seq_num)
         self.peer_ip_addr = peer_ip_addr
         self.peer_port = int(peer_port)
+        self.is_last_packet = is_last_packet
         self.payload = payload
 
     def to_bytes(self):
@@ -25,6 +26,10 @@ class Packet:
         buf.extend(self.seq_num.to_bytes(4, byteorder='big'))
         buf.extend(self.peer_ip_addr.packed)
         buf.extend(self.peer_port.to_bytes(2, byteorder='big'))
+        last_packet = 0
+        if self.is_last_packet:
+            last_packet = 1
+        buf.extend(last_packet.to_bytes(1, byteorder='big'))
 
         buf.extend(self.payload)
 
@@ -61,10 +66,13 @@ class Packet:
         seq_num = int.from_bytes(nbytes(4), byteorder='big')
         peer_addr = ipaddress.ip_address(nbytes(4))
         peer_port = int.from_bytes(nbytes(2), byteorder='big')
+        last_packet = int.from_bytes(nbytes(1), byteorder='big')
+        is_last_packet = (last_packet is 1)
         payload = raw[curr[1]:]
 
         return Packet(packet_type=packet_type,
                       seq_num=seq_num,
                       peer_ip_addr=peer_addr,
                       peer_port=peer_port,
+                      is_last_packet=is_last_packet,
                       payload=payload)

@@ -151,8 +151,10 @@ def handle_client(conn, addr, host, port):
             filename = get_filename(parsedData)
             checkIfGoodDirectoryGet(filename)
             if(debug):
-                print("GET request for file " + filename)
+                print("GET request")
             if filename:
+                if(debug):
+                    print("GET request for file " + filename)
                 type = get_file_mimetype(filename)
                 filetype = type[0]
                 if(filetype is None):

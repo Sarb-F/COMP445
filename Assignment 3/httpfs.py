@@ -5,6 +5,7 @@ import os
 import os.path
 import json
 import mimetypes
+from packet import Packet
 
 CRLF = "\r\n"
 debug = False
@@ -13,16 +14,17 @@ file_dir = os.getcwd() + "\\files\\"
 def run_server(host, port, dir):
     global file_dir
     file_dir = dir
-    listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    conn = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     try:
-        listener.bind((host, port))
-        listener.listen(5)
+        conn.bind(('', port))
+        #listener.listen(5)
         print('File server is listening at', port)
         while True:
-            conn, addr = listener.accept()
-            threading.Thread(target=handle_client, args=(conn, addr, host, port)).start()
+            data, sender = conn.recvfrom(1024)
+            handle_packet(conn, data, sender)
+            #threading.Thread(target=handle_client, args=(conn, addr, host, port)).start()
     finally:
-        listener.close()
+        conn.close()
 
 def get_file_dir():
     global file_dir
@@ -109,8 +111,9 @@ def checkIfGoodDirectoryPost(filename):
     if('/' in filename or '\\' in filename):
         raise Exception("You cannot Post the file there! Stop trying to hack our system.")
 
-def handle_client(conn, addr, host, port):
-    if(debug):
+def handle_packet(conn, data, sender):
+    p = Packet.from_bytes(data)
+    '''if(debug):
         print('New client from', addr)
     data = b''
     conn.settimeout(0.50)
@@ -123,9 +126,20 @@ def handle_client(conn, addr, host, port):
             if not newData:
                 break
             data +=  newData
+            break;
         except:
-            break
-    
+            break'''
+    print(sender)
+    response = handle_data(p.payload, sender)
+    new_p = Packet(packet_type=0,
+                   seq_num=p.seq_num,
+                   peer_ip_addr=p.peer_ip_addr,
+                   peer_port=p.peer_port,
+                   payload=response)
+    conn.sendto(new_p.to_bytes(), sender)
+
+def handle_data(data, addr):
+    host = "localhost"
     #Because the body of the message is often binary, we cannot decode it. So look for /r/n/r/n which marks the start of the body and parse header and body separately
     crlf_count = 0
     header_data = b''
@@ -151,8 +165,10 @@ def handle_client(conn, addr, host, port):
             filename = get_filename(parsedData)
             checkIfGoodDirectoryGet(filename)
             if(debug):
-                print("GET request for file " + filename)
+                    print("GET request")
             if filename:
+                if(debug):
+                    print("GET request for file " + filename)
                 type = get_file_mimetype(filename)
                 filetype = type[0]
                 if(filetype is None):
@@ -170,30 +186,32 @@ def handle_client(conn, addr, host, port):
             bytes = bytes + CRLF.encode('utf-8')
             bytes = bytes + response_body
             bytes = bytes + CRLF.encode('utf-8')
-        conn.sendall(bytes)
+        return bytes
+        #conn.sendall(bytes)
     except IOError as IO:
         if(debug):
             print("404 Error triggered")
         response = "HTTP/1.1 404 ERROR: File could not be found%sConnection: keep-alive%sServer: %s%s"%(CRLF, CRLF, host, CRLF)
         response = response + str(IO)
         bytes = response.encode('utf-8')
-        conn.sendall(bytes)
+        return bytes
+        #conn.sendall(bytes)
     except SystemError as SE:
         if(debug):
             print("400 Error triggered")
         response = "HTTP/1.1 400 ERROR: Bad Request%sConnection: keep-alive%sServer: %s%s"%(CRLF, CRLF, host, CRLF)
         response = response +str(SE)
         bytes = response.encode('utf-8')
-        conn.sendall(bytes)
+        return bytes
+        #conn.sendall(bytes)
     except Exception as e:
         if(debug):
             print("403 Error triggered")
         response = "HTTP/1.1 403 ERROR: Security Error%sConnection: keep-alive%sServer: %s%s"%(CRLF, CRLF, host, CRLF)
         response = response + str(e)
         bytes = response.encode('utf-8')
-        conn.sendall(bytes)
-    finally:
-        conn.close()
+        return bytes
+        #conn.sendall(bytes)
 
 # Usage python httpfileserver.py [--port port-number]
 current_dir = os.getcwd() + "\\files\\"

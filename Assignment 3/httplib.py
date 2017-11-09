@@ -17,6 +17,7 @@ router = (router_host, router_port)
 def connect(host, port):
     global conn
     conn = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    conn.bind(('', 7631))
     #TODO: TCP handshake here
 
 # Method to close the open TCP connection

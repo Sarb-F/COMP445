@@ -21,6 +21,8 @@ class Packet_Constructor:
                 payload = self.payload
                 self.reset()
                 return payload
+        else:
+            print("got out of order packet")
         return None
     
     @staticmethod

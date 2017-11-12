@@ -30,23 +30,31 @@ class Packet_Constructor:
         conn.sendto(p.to_bytes(), destination)
     
     def add_packet(self, p, conn, sender):
-        if p.seq_num == self.next_seq_num:
-            self.send_ack(conn, self.next_seq_num, sender, p.peer_ip_addr, p.peer_port)
-            self.next_seq_num += 1
-            self.payload += p.payload
-            if(p.is_last_packet):
-                payload = self.payload
-                self.reset()
-                return payload
+        if p.seq_num >= self.next_seq_num and p.seq_num <= (self.next_seq_num + Packet_Constructor.window_size):
+            self.send_ack(conn, p.seq_num, sender, p.peer_ip_addr, p.peer_port)
+            if p.seq_num == self.next_seq_num:
+                self.next_seq_num += 1
+                self.payload += p.payload
+                if(p.is_last_packet):
+                    payload = self.payload
+                    self.reset()
+                    return payload
+            else:
+                print("got out of order packet " + str(p.seq_num))
+                #TODO: store the out of order packet somewhere
         else:
-            print("got out of order packet")
+            print("got an out of window packet " + str(p.seq_num))
+            #TODO: I think we send a NAK in this case? Or is it not even supposed to end up here?
         return None
     
-    def await_ack(conn):
-        data, sender = conn.recvfrom(1024)
-        print("got ack")
-        p = Packet.from_bytes(data)
-        print(p.seq_num)
+    def await_acks(conn, sent_packets):
+        print("awaitng acks")
+        while(sent_packets > 0):
+            data, sender = conn.recvfrom(1024)
+            print("got ack")
+            p = Packet.from_bytes(data)
+            print(p.seq_num)
+            sent_packets -= 1
     
     @staticmethod
     def send_as_packets(data, conn, destination, peer_ip, peer_port):
@@ -59,6 +67,7 @@ class Packet_Constructor:
             return data[curr[0]: curr[1]]
         
         remaining_data = len(data)
+        sent_packets = 0
         seq_num = 0
         while remaining_data > 0:
             print("sending packet %d"%seq_num)
@@ -71,6 +80,7 @@ class Packet_Constructor:
                    payload=nbytes(max_payload_length))
                 
                 conn.sendto(p.to_bytes(), destination)
+                sent_packets += 1
                 remaining_data -= max_payload_length
                 seq_num += 1
                 print("not last packet")
@@ -83,6 +93,10 @@ class Packet_Constructor:
                    payload=nbytes(remaining_data))
                 
                 conn.sendto(p.to_bytes(), destination)
-                remaining_data -= max_payload_length
+                sent_packets += 1
+                remaining_data -= remaining_data
+                print("remaining data " + str(remaining_data))
                 print("is last packet")
-            Packet_Constructor.await_ack(conn)
+            if(sent_packets == Packet_Constructor.window_size or remaining_data == 0):
+                Packet_Constructor.await_acks(conn, sent_packets)
+                sent_packets = 0

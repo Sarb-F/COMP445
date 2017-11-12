@@ -139,11 +139,11 @@ def handle_packet(conn, data, sender):
             break;
         except:
             break'''
-    print(sender)
+    '''print(sender)
     print(p.seq_num)
     print(data)
     print(p.peer_ip_addr)
-    print(p.peer_port)
+    print(p.peer_port)'''
     if(payload):
         print("Received last packet")
         response = handle_data(payload, sender)

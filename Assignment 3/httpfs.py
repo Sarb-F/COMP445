@@ -116,7 +116,7 @@ def checkIfGoodDirectoryPost(filename):
 def handle_packet(conn, data, sender):
     global p_constructor
     p = Packet.from_bytes(data)
-    payload = p_constructor.add_packet(p)
+    payload = p_constructor.add_packet(p, conn, sender)
     '''p = Packet.from_bytes(data)
     if p.seq_num is 0:
         current_payload = p.payload

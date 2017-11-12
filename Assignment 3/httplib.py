@@ -74,7 +74,7 @@ def communicate_with_server(data, host, port):
             print("got some data")
             p = Packet.from_bytes(data)
             print(p.seq_num)
-            payload = p_constructor.add_packet(p)
+            payload = p_constructor.add_packet(p, conn, sender)
             if(payload):
                 print("Received last packet")
                 print(payload)

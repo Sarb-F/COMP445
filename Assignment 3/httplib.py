@@ -6,6 +6,7 @@ import re
 from urllib.parse import urlparse
 from packet import Packet
 from packet_constructor import Packet_Constructor
+from packet_sender import Packet_Sender
 
 CRLF = "\r\n"
 router_host="localhost"
@@ -66,7 +67,7 @@ def communicate_with_server(data, host, port):
     try:
         peer_ip = ipaddress.ip_address(socket.gethostbyname(host))
         connect(host, port)
-        Packet_Constructor.send_as_packets(data, conn, router, peer_ip, port)
+        Packet_Sender.send_as_packets(data, conn, router, peer_ip, port)
         p_constructor = Packet_Constructor()
         while True:
             print("waiting for data")

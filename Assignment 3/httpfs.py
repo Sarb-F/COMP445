@@ -7,6 +7,7 @@ import json
 import mimetypes
 from packet import Packet
 from packet_constructor import Packet_Constructor
+from packet_sender import Packet_Sender
 
 CRLF = "\r\n"
 debug = False
@@ -23,7 +24,8 @@ def run_server(host, port, dir):
         print('File server is listening at', port)
         while True:
             data, sender = conn.recvfrom(1024)
-            handle_packet(conn, data, sender)
+            threading.Thread(target=handle_packet, args=(conn, data, sender)).start()
+            #handle_packet(conn, data, sender)
             #threading.Thread(target=handle_client, args=(conn, addr, host, port)).start()
     finally:
         conn.close()
@@ -149,7 +151,7 @@ def handle_packet(conn, data, sender):
         response = handle_data(payload, sender)
         print("Sending packets")
         print(response)
-        Packet_Constructor.send_as_packets(response, conn, sender, p.peer_ip_addr, p.peer_port)
+        Packet_Sender.send_as_packets(response, conn, sender, p.peer_ip_addr, p.peer_port)
         '''new_p = Packet(packet_type=0,
                        seq_num=p.seq_num,
                        peer_ip_addr=p.peer_ip_addr,

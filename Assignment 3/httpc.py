@@ -267,7 +267,7 @@ def main():
         parser.set_defaults(func=run)
         args = parser.parse_args()
         args.func(args)
-        #python httpc.py --post --url "http://localhost" --port 8007 -v --f "Comp445-F17_LA3.pdf"
+        #python httpc.py --post --url "http://localhost/thing2.pdf" --port 8007 -v --f "Comp445-F17_LA3.pdf"
 
 # function that runs the entire program
 if __name__=="__main__":

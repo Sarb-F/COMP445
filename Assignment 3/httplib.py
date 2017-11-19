@@ -72,6 +72,7 @@ def communicate_with_server(data, host, port):
         while True:
             print("waiting for data")
             data, sender = conn.recvfrom(1024)
+            #TODO: these packets should be received on different threads, like how httpfs receives packets
             print("got some data")
             p = Packet.from_bytes(data)
             print(p.seq_num)

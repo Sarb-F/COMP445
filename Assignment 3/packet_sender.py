@@ -51,6 +51,9 @@ class Packet_Sender:
                 print("seq_num: " + str(seq_num))
         acked_packets_lock.release()
     
+    #TODO: add timeouts. If we do not receive an ack in a certain period of time, resend the original packet
+    #TODO: are there extra command line args we need to add?
+    #TODO: anything else in pdf that we need to add?
     def await_acks(conn):
         print("awaitng acks")
         while not Packet_Sender.acked_all_packets:

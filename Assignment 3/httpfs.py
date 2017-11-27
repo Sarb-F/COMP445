@@ -8,11 +8,13 @@ import mimetypes
 from packet import Packet
 from packet_constructor import Packet_Constructor
 from packet_sender import Packet_Sender
+from time import sleep
 
 CRLF = "\r\n"
 debug = False
 file_dir = os.getcwd() + "\\files\\"
 p_constructor = Packet_Constructor()
+handshake_completed = False
 
 def run_server(host, port, dir):
     global file_dir
@@ -117,53 +119,28 @@ def checkIfGoodDirectoryPost(filename):
 
 def handle_packet(conn, data, sender):
     global p_constructor
+    global handshake_completed
     p = Packet.from_bytes(data)
-    payload = p_constructor.add_packet(p, conn, sender)
-    '''p = Packet.from_bytes(data)
-    if p.seq_num is 0:
-        current_payload = p.payload
-    else:
-        current_payload += p.payload'''
-    
-    '''if(debug):
-        print('New client from', addr)
-    data = b''
-    conn.settimeout(0.50)
-    #Read in data from the socket until there is a timeout. Then we know there is no more to read
-    while True:
-        try:
-            newData = conn.recv(1024)
-            if(debug):
-                print(newData)
-            if not newData:
-                break
-            data +=  newData
-            break;
-        except:
-            break'''
-    '''print(sender)
-    print(p.seq_num)
-    print(data)
-    print(p.peer_ip_addr)
-    print(p.peer_port)'''
-    if(payload):
-        print("Received last packet")
-        response = handle_data(payload, sender)
-        print("Sending packets")
-        print(response)
-        Packet_Sender.send_as_packets(response, conn, sender, p.peer_ip_addr, p.peer_port)
-        '''new_p = Packet(packet_type=0,
-                       seq_num=p.seq_num,
-                       peer_ip_addr=p.peer_ip_addr,
-                       peer_port=p.peer_port,
-                       is_last_packet=True,
-                       payload=response)
-        print("Sending packet")
-        print(response)
-        conn.sendto(new_p.to_bytes(), sender)'''
-        print("Sent!")
-    else:
-        print("is not the last packet")
+
+    if(p.packet_type == Packet_Constructor.syn_type):
+        print("TCP works!")
+        p.packet_type = Packet_Constructor.syn_ack_type
+        conn.sendto(p.to_bytes(), sender)
+    elif(p.packet_type == Packet_Constructor.ack_type):
+        handshake_completed = True
+        print("TCP has been completed")
+    elif(handshake_completed):    
+        payload = p_constructor.add_packet(p, conn, sender)    
+        if(payload):
+            print("Received last packet")
+            response = handle_data(payload, sender)
+            print("Sending packets")
+            print(response)
+            sleep(0.1) # Time in seconds.
+            Packet_Sender.send_as_packets(response, conn, sender, p.peer_ip_addr, p.peer_port)
+            handshake_completed = False
+        else:
+            print("is not the last packet")
 
 def handle_data(data, addr):
     host = "localhost"

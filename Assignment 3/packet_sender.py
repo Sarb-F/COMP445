@@ -82,7 +82,7 @@ class Packet_Sender:
         #While there's still data to be sent
         while remaining_data > 0:
             #While there are less packets in transit than the window size
-            while sent_packets < Packet_Constructor.window_size:
+            while(sent_packets < Packet_Constructor.window_size and remaining_data > 0):
                 print("sending packet %d"%seq_num)
                 if remaining_data > max_payload_length:
                     p = Packet(packet_type=Packet_Constructor.data_type,

@@ -37,7 +37,6 @@ def connect(host, port, peer_ip):
                        payload=data)
     
     conn.sendto(p.to_bytes(), router) 
-    print("TCP SYN SENT")
 
     response, sender = conn.recvfrom(1024)
     p = Packet.from_bytes(response)
@@ -45,7 +44,6 @@ def connect(host, port, peer_ip):
     if(p.packet_type == Packet_Constructor.syn_ack_type):
         p.packet_type = Packet_Constructor.ack_type
         conn.sendto(p.to_bytes(), sender)
-        print("TCP completely works!")
     else:
         print(p.packet_type)
         connect(host, port, peer_ip)
@@ -115,18 +113,12 @@ def communicate_with_server(data, host, port):
     global payload
 
     try:
-        print("I am with communicate")
         received_payload = False
         payload = None
-        print("Now I am here")
         peer_ip = ipaddress.ip_address(socket.gethostbyname(host))
-        print("Or here")
         connect(host, port, peer_ip)
-        print("Maybe ")
         Packet_Sender.send_as_packets(data, conn, router, peer_ip, port)
-        print("I am here")
         while(not received_payload):
-            print("Thread should be working")
             data, sender = conn.recvfrom(1024)
             #TODO: these packets should be received on different threads, like how httpfs receives packets
             threading.Thread(target=handle_packet_client, args=(conn, data, sender)).start()
@@ -139,16 +131,14 @@ def handle_packet_client(conn, data, sender):
     global received_payload
     global payload
 
-    print("lala")
     p = Packet.from_bytes(data)
     print(p.seq_num)
     payload = p_constructor.add_packet(p, conn, sender)
     if(payload):
-        print("yes yes")
         print(payload)
         received_payload = True
     else:
-        print("no no")
+        print("payload was not received.")
     
 # Method to perform a get request to a specified url with the given headers and body
 # @param url: the url to perform the get request on
@@ -174,9 +164,6 @@ def get_request(url, port, headers, body):
     message = message + CRLF + body + CRLF
     # Send message
     response = communicate_with_server(message.encode('utf-8'), host, port)
-    '''conn.send(message.encode('utf-8'))
-    buf = conn.recv(10000)
-    buf = buf.decode('utf-8')'''
     
     return parse_response(response)
 
@@ -206,8 +193,5 @@ def post_request(url, port, headers, body):
     byte_message = byte_message + body + CRLF.encode('utf-8')
     # Send message
     response = communicate_with_server(byte_message, host, port)
-    '''conn.send(byte_message)
-    buf = conn.recv(10000)
-    buf = buf.decode('utf-8')'''
         
     return parse_response(response)

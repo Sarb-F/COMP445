@@ -123,12 +123,14 @@ def handle_packet(conn, data, sender):
     p = Packet.from_bytes(data)
 
     if(p.packet_type == Packet_Constructor.syn_type):
-        print("TCP works!")
+        if(debug):
+            print("TCP works!")        
         p.packet_type = Packet_Constructor.syn_ack_type
         conn.sendto(p.to_bytes(), sender)
     elif(p.packet_type == Packet_Constructor.ack_type):
         handshake_completed = True
-        print("TCP has been completed")
+        if(debug):
+            print("TCP has been completed")
     elif(handshake_completed):    
         payload = p_constructor.add_packet(p, conn, sender)    
         if(payload):

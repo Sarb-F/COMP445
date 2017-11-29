@@ -183,8 +183,6 @@ def post_request(url, port, headers, body):
         path = "/"
     host = url.netloc
     headers["Host"] = host
-    # Connect to the host
-    connect(host, port)
     # Construct the message
     message = "POST %s HTTP/1.1%s" % (path, CRLF)
     for header in headers:

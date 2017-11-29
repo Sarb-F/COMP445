@@ -50,7 +50,7 @@ class Packet_Constructor:
         conn.sendto(p.to_bytes(), destination)
     
     def add_packet(self, p, conn, sender):
-        if p.seq_num >= self.next_seq_num and p.seq_num <= (self.next_seq_num + Packet_Constructor.window_size):
+        if p.packet_type == Packet_Constructor.data_type and p.seq_num >= self.next_seq_num and p.seq_num <= (self.next_seq_num + Packet_Constructor.window_size):
             self.send_ack(conn, p.seq_num, sender, p.peer_ip_addr, p.peer_port)
             if p.seq_num not in self.received_packets:
                 self.received_packets[p.seq_num] = p.payload

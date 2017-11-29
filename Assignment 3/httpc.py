@@ -191,9 +191,7 @@ def run(args):
                             print(response['body'])
                             print(response['header'])
                             print(response['response'])
-                            print("dict coming")
                             print(dict) # print entire get response
-                            print("done prints")                            
                 else:
                     print("Cannot perform a --f and a --d command for --get")
 
@@ -268,6 +266,7 @@ def main():
         args = parser.parse_args()
         args.func(args)
         #python httpc.py --post --url "http://localhost/thing2.pdf" --port 8007 -v --f "Comp445-F17_LA3.pdf"
+        #python httpc.py --get --url "http://localhost/" --port 8007 -v
 
 # function that runs the entire program
 if __name__=="__main__":

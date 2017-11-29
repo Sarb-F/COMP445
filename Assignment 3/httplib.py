@@ -3,6 +3,7 @@ import argparse
 import ipaddress
 import sys
 import re
+import threading
 from urllib.parse import urlparse
 from packet import Packet
 from packet_constructor import Packet_Constructor
@@ -42,13 +43,12 @@ def connect(host, port, peer_ip):
     p = Packet.from_bytes(response)
 
     if(p.packet_type == Packet_Constructor.syn_ack_type):
+        print("Got syn ack, responding with ack")
         p.packet_type = Packet_Constructor.ack_type
         conn.sendto(p.to_bytes(), sender)
     else:
-        print(p.packet_type)
+        print("During TCP handshake, got the wrong packet type. Restarting")
         connect(host, port, peer_ip)
-
-    #TODO: TCP handshake here
 
 # Method to close the open TCP connection
 def close_connection():
@@ -88,7 +88,7 @@ def parse_response(response):
     
     for c in range(len(header_data)):
         if header_data[c] != "chunked":
-            header += temp[c]
+            header += header_data[c]
             header += " "
         if header_data[c] == "chunked":
             header += header_data[c]
@@ -103,7 +103,6 @@ def parse_response(response):
             body += " "
         
     display = {"status": status, "code": code, "body": body, "header": header, "response": response}
-    print("I am over here")
     return display
 
 def communicate_with_server(data, host, port):
@@ -119,11 +118,15 @@ def communicate_with_server(data, host, port):
         connect(host, port, peer_ip)
         Packet_Sender.send_as_packets(data, conn, router, peer_ip, port)
         while(not received_payload):
+            print("awaiting packet")
             data, sender = conn.recvfrom(1024)
-            #TODO: these packets should be received on different threads, like how httpfs receives packets
+            print("got a packet")
             threading.Thread(target=handle_packet_client, args=(conn, data, sender)).start()
+    except Exception as e:
+        print("got exception")
+        print(e)
     finally:
-        close_connection()
+        #close_connection()
         return payload
 
 def handle_packet_client(conn, data, sender):
@@ -132,13 +135,12 @@ def handle_packet_client(conn, data, sender):
     global payload
 
     p = Packet.from_bytes(data)
-    print(p.seq_num)
-    payload = p_constructor.add_packet(p, conn, sender)
-    if(payload):
-        print(payload)
-        received_payload = True
-    else:
-        print("payload was not received.")
+    if p.seq_num == Packet_Constructor.data_type:
+        print(p.seq_num)
+        payload = p_constructor.add_packet(p, conn, sender)
+        if(payload):
+            print(payload)
+            received_payload = True
     
 # Method to perform a get request to a specified url with the given headers and body
 # @param url: the url to perform the get request on
